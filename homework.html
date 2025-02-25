@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>學生任務管理</title>
+    <style>
+        .calendar-container { text-align: center; }
+        .calendar-header { display: flex; justify-content: center; align-items: center; gap: 20px; }
+        .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 20px; }
+        .day { border: 1px solid #ccc; padding: 10px; min-height: 80px; position: relative; cursor: pointer; }
+        .day .task-buttons { display: flex; justify-content: center; gap: 10px; margin-top: 5px; }
+        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 1px solid black; }
+        .modal.active { display: block; }
+    </style>
+</head>
+<body>
+    <h2>學生任務管理</h2>
+    <label>輸入學生姓名（用逗號分隔）: <input type="text" id="studentNames"></label>
+    <button onclick="saveStudents()">設定學生</button>
+    
+    <div class="calendar-container">
+        <div class="calendar-header">
+            <button onclick="prevMonth()">◀ 上個月</button>
+            <h3 id="currentMonth"></h3>
+            <button onclick="nextMonth()">下個月 ▶</button>
+        </div>
+        <div class="calendar" id="calendar"></div>
+    </div>
+
+    <div id="taskModal" class="modal">
+        <h3 id="modalDate"></h3>
+        <textarea id="taskInput" rows="5" cols="30"></textarea>
+        <br>
+        <button onclick="saveTask()">送出</button>
+        <button onclick="closeModal()">關閉</button>
+    </div>
+
+    <script>
+        let students = [];
+        let tasks = {};
+        let currentYear = new Date().getFullYear();
+        let currentMonth = new Date().getMonth() + 1;
+        let selectedDay = null;
+
+        function saveStudents() {
+            students = document.getElementById('studentNames').value.split(',').map(s => s.trim());
+            alert('學生名單已設定');
+        }
+
+        function generateCalendar() {
+            const calendar = document.getElementById('calendar');
+            document.getElementById('currentMonth').textContent = `${currentYear} 年 ${currentMonth} 月`;
+            calendar.innerHTML = '';
+            
+            let daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+            for (let i = 1; i <= daysInMonth; i++) {
+                const day = document.createElement('div');
+                day.classList.add('day');
+                day.innerHTML = `<strong>${currentMonth}/${i} (${getWeekday(currentYear, currentMonth, i)})</strong>`;
+                
+                const taskButtons = document.createElement('div');
+                taskButtons.classList.add('task-buttons');
+                
+                const taskButton = document.createElement('span');
+                taskButton.textContent = '任';
+                taskButton.style.color = 'blue';
+                taskButton.style.cursor = 'pointer';
+                taskButton.onclick = () => openTaskModal(i);
+                
+                const checkButton = document.createElement('span');
+                checkButton.textContent = '檢';
+                checkButton.style.color = 'red';
+                checkButton.style.cursor = 'pointer';
+                checkButton.onclick = () => viewTasks(i);
+                
+                taskButtons.appendChild(taskButton);
+                taskButtons.appendChild(checkButton);
+                day.appendChild(taskButtons);
+                
+                calendar.appendChild(day);
+            }
+        }
+
+        function openTaskModal(day) {
+            selectedDay = day;
+            document.getElementById('modalDate').textContent = `${currentYear}-${currentMonth}-${day}`;
+            document.getElementById('taskInput').value = tasks[`${currentYear}-${currentMonth}-${day}`] || '';
+            document.getElementById('taskModal').classList.add('active');
+        }
+
+        function saveTask() {
+            const taskText = document.getElementById('taskInput').value;
+            tasks[`${currentYear}-${currentMonth}-${selectedDay}`] = taskText;
+            document.getElementById('taskModal').classList.remove('active');
+            generateCalendar();
+        }
+
+        function closeModal() {
+            document.getElementById('taskModal').classList.remove('active');
+        }
+
+        function viewTasks(day) {
+            sessionStorage.setItem('selectedDay', `${currentYear}-${currentMonth}-${day}`);
+            window.location.href = 'task_view.html';
+        }
+
+        function prevMonth() {
+            if (currentMonth === 1) {
+                currentYear--;
+                currentMonth = 12;
+            } else {
+                currentMonth--;
+            }
+            generateCalendar();
+        }
+
+        function nextMonth() {
+            if (currentMonth === 12) {
+                currentYear++;
+                currentMonth = 1;
+            } else {
+                currentMonth++;
+            }
+            generateCalendar();
+        }
+
+        function getWeekday(year, month, day) {
+            const days = ['日', '一', '二', '三', '四', '五', '六'];
+            return `星期${days[new Date(year, month - 1, day).getDay()]}`;
+        }
+
+        generateCalendar();
+    </script>
+</body>
+</html>
