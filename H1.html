@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>學生作業管理追蹤</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .calendar-container { text-align: center; }
+        .calendar-header { display: flex; justify-content: center; align-items: center; gap: 20px; font-size: 1.5em; }
+        .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 20px; }
+        .day { border: 1px solid #ccc; padding: 10px; min-height: 80px; position: relative; cursor: pointer; }
+        .day .task-buttons { display: flex; justify-content: center; gap: 10px; margin-top: 5px; }
+        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 1px solid black; }
+        .modal.active { display: block; }
+        .task-status { font-weight: bold; }
+        .completed { color: green; }
+        .revised { color: orange; }
+        .not-submitted { color: red; }
+    </style>
+</head>
+<body>
+    <h2>學生作業管理追蹤</h2>
+    
+    <div>
+        <label>輸入學生姓名（用逗號分隔）: <input type="text" id="studentNames"></label>
+        <button onclick="saveStudents()">設定學生</button>
+    </div>
+    
+    <div class="calendar-container">
+        <div class="calendar-header">
+            <button onclick="prevMonth()">◀ 上個月</button>
+            <h3 id="currentMonth"></h3>
+            <button onclick="nextMonth()">下個月 ▶</button>
+        </div>
+        <div class="calendar" id="calendar"></div>
+    </div>
+
+    <div id="taskModal" class="modal">
+        <h3 id="modalDate"></h3>
+        <textarea id="taskInput" rows="5" cols="30"></textarea>
+        <br>
+        <button onclick="saveTask()">送出</button>
+        <button onclick="closeModal()">關閉</button>
+    </div>
+
+    <script>
+        let students = [];
+        let tasks = {};
+        let currentYear = new Date().getFullYear();
+        let currentMonth = new Date().getMonth() + 1;
+        let selectedDay = null;
+
+        // 儲存學生姓名
+        function saveStudents() {
+            students = document.getElementById('studentNames').value.split(',').map(s => s.trim());
+            alert('學生名單已設定');
+        }
+
+        // 生成行事曆
+        function generateCalendar() {
+            const calendar = document.getElementById('calendar');
+            document.getElementById('currentMonth').textContent = `${currentYear} 年 ${currentMonth} 月`;
+            calendar.innerHTML = '';
+            
+            let daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+            for (let i = 1; i <= daysInMonth; i++) {
+                const day = document.createElement('div');
+                day.classList.add('day');
+                day.innerHTML = `<strong>${currentMonth}/${i} (${getWeekday(currentYear, currentMonth, i)})</strong>`;
+                
+                const taskButtons = document.createElement('div');
+                taskButtons.classList.add('task-buttons');
+                
+                const taskButton = document.createElement('span');
+                taskButton.textContent = '任';
+                taskButton.style.color = 'blue';
+                taskButton.style.cursor = 'pointer';
+                taskButton.onclick = () => openTaskModal(i);
+                
+                const checkButton = document.createElement('span');
+                checkButton.textContent = '檢';
+                checkButton.style.color = 'red';
+                checkButton.style.cursor = 'pointer';
+                checkButton.onclick = () => viewTasks(i);
+                
+                taskButtons.appendChild(taskButton);
+                taskButtons.appendChild(checkButton);
+                day.appendChild(taskButtons);
+                
+                calendar.appendChild(day);
+            }
+        }
+
+        // 開啟任務輸入彈出視窗
+        function openTaskModal(day) {
+            selectedDay = day;
+            document.getElementById('modalDate').textContent = `${currentYear}-${currentMonth}-${day}`;
+            document.getElementById('taskInput').value = tasks[`${currentYear}-${currentMonth}-${day}`] || '';
+            document.getElementById('taskModal').classList.add('active');
+        }
+
+        // 儲存任務
+        function saveTask() {
+            const taskText = document.getElementById('taskInput').value;
+            tasks[`${currentYear}-${currentMonth}-${selectedDay}`] = taskText;
+            localStorage.setItem('tasks', JSON.stringify(tasks)); // 儲存到 localStorage
+            document.getElementById('taskModal').classList.remove('active');
+            generateCalendar();
+        }
+
+        // 關閉任務視窗
+        function closeModal() {
+            document.getElementById('taskModal').classList.remove('active');
+        }
+
+        // 觀看任務
+        function viewTasks(day) {
+            sessionStorage.setItem('selectedDay', `${currentYear}-${currentMonth}-${day}`);
+            window.location.href = 'task_view.html'; // 查看任務畫面
+        }
+
+        // 切換到上一個月
+        function prevMonth() {
+            if (currentMonth === 1) {
+                currentYear--;
+                currentMonth = 12;
+            } else {
+                currentMonth--;
+            }
+            generateCalendar();
+        }
+
+        // 切換到下一個月
+        function nextMonth() {
+            if (currentMonth === 12) {
+                currentYear++;
+                currentMonth = 1;
+            } else {
+                currentMonth++;
+            }
+            generateCalendar();
+        }
+
+        // 取得星期幾
+        function getWeekday(year, month, day) {
+            const days = ['日', '一', '二', '三', '四', '五', '六'];
+            return `星期${days[new Date(year, month - 1, day).getDay()]}`;
+        }
+
+        // 頁面載入時
+        window.onload = function() {
+            generateCalendar();
+            loadTasks();
+        };
+
+        // 讀取 localStorage 中的任務
+        function loadTasks() {
+            const storedTasks = localStorage.getItem('tasks');
+            if (storedTasks) {
+                tasks = JSON.parse(storedTasks);
+            }
+        }
+    </script>
+</body>
+</html>
+
